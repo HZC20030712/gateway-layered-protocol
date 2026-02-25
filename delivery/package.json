@@ -1,0 +1,33 @@
+{
+  "name": "gateway-layered-protocol",
+  "version": "1.0.0",
+  "description": "主网关统一指挥，辅网关分布式执行 - 跨域 Agent 团队联调工具",
+  "main": "dist/gateway.js",
+  "scripts": {
+    "build": "tsc",
+    "dev:main": "ts-node src/main-gateway.ts",
+    "dev:aux": "ts-node src/auxiliary-gateway.ts",
+    "start:main": "node dist/main-gateway.js",
+    "start:aux": "node dist/auxiliary-gateway.js",
+    "test": "node test-quick.js",
+    "web:dev": "cd web && npm run dev",
+    "web:build": "cd web && npm run build"
+  },
+  "keywords": [
+    "gateway",
+    "agent",
+    "distributed",
+    "websocket"
+  ],
+  "author": "OpenCloud Team",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/ws": "^8.5.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}
