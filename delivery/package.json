@@ -11,7 +11,8 @@
     "start:aux": "node dist/auxiliary-gateway.js",
     "test": "node test-quick.js",
     "web:dev": "cd web && npm run dev",
-    "web:build": "cd web && npm run build"
+    "web:build": "cd web && npm run build",
+    "dev:all": "concurrently \"npm run dev:main\" \"npm run dev:aux\""
   },
   "keywords": [
     "gateway",
