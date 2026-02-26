@@ -1,5 +1,6 @@
 /**
- * Gateway Manager - 黑色风格管理界面
+ * Gateway Manager - 黑色风格管理界面 (优化版)
+ * 优化内容：状态可视化仪表盘 + 交互优化 + 响应式布局
  */
 
 import { useState, useEffect } from 'react'
@@ -33,12 +34,27 @@ function App() {
   const [gateways, setGateways] = useState<Gateway[]>([])
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [metrics, setMetrics] = useState({ avgCpu: 0, avgMemory: 0, totalTasks: 0 })
   
   // 任务表单
   const [selectedGateway, setSelectedGateway] = useState('')
   const [agentId, setAgentId] = useState('dev')
   const [command, setCommand] = useState('code-review')
   const [params, setParams] = useState('{"repo": "opencloud-migration"}')
+
+  // 更新指标
+  useEffect(() => {
+    const onlineGateways = gateways.filter(g => g.status === 'online')
+    setMetrics({
+      avgCpu: onlineGateways.length > 0 
+        ? Math.round(onlineGateways.reduce((sum, g) => sum + (g.cpu || 0), 0) / onlineGateways.length)
+        : 0,
+      avgMemory: onlineGateways.length > 0
+        ? Math.round(onlineGateways.reduce((sum, g) => sum + (g.memory || 0), 0) / onlineGateways.length)
+        : 0,
+      totalTasks: tasks.length
+    })
+  }, [gateways, tasks])
 
   // WebSocket 连接
   useEffect(() => {
@@ -175,6 +191,88 @@ function App() {
           <div style={styles.statCard}>
             <div style={styles.statValue}>{logs.filter(l => l.type === 'error').length}</div>
             <div style={styles.statLabel}>错误数</div>
+          </div>
+        </div>
+
+        {/* 状态可视化仪表盘 */}
+        <div style={styles.dashboard}>
+          <h2 style={styles.dashboardTitle}>📊 系统健康度</h2>
+          <div style={styles.metricsGrid}>
+            {/* CPU 使用率 */}
+            <div style={styles.metricCard}>
+              <div style={styles.metricHeader}>
+                <span style={styles.metricIcon}>🖥️</span>
+                <span style={styles.metricLabel}>平均 CPU 使用率</span>
+                <span style={styles.metricValue}>{metrics.avgCpu}%</span>
+              </div>
+              <div style={styles.progressBar}>
+                <div style={{
+                  ...styles.progressFill,
+                  width: `${metrics.avgCpu}%`,
+                  backgroundColor: metrics.avgCpu > 80 ? '#ef4444' : metrics.avgCpu > 50 ? '#f59e0b' : '#10b981'
+                }} />
+              </div>
+            </div>
+
+            {/* 内存使用率 */}
+            <div style={styles.metricCard}>
+              <div style={styles.metricHeader}>
+                <span style={styles.metricIcon}>💾</span>
+                <span style={styles.metricLabel}>平均内存使用率</span>
+                <span style={styles.metricValue}>{metrics.avgMemory}%</span>
+              </div>
+              <div style={styles.progressBar}>
+                <div style={{
+                  ...styles.progressFill,
+                  width: `${metrics.avgMemory}%`,
+                  backgroundColor: metrics.avgMemory > 80 ? '#ef4444' : metrics.avgMemory > 50 ? '#f59e0b' : '#10b981'
+                }} />
+              </div>
+            </div>
+
+            {/* 任务完成率 */}
+            <div style={styles.metricCard}>
+              <div style={styles.metricHeader}>
+                <span style={styles.metricIcon}>✅</span>
+                <span style={styles.metricLabel}>任务完成率</span>
+                <span style={styles.metricValue}>
+                  {tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0}%
+                </span>
+              </div>
+              <div style={styles.progressBar}>
+                <div style={{
+                  ...styles.progressFill,
+                  width: `${tasks.length > 0 ? (tasks.filter(t => t.status === 'completed').length / tasks.length) * 100 : 0}%`,
+                  backgroundColor: '#10b981'
+                }} />
+              </div>
+            </div>
+
+            {/* 网关拓扑 */}
+            <div style={styles.metricCard}>
+              <div style={styles.metricHeader}>
+                <span style={styles.metricIcon}>🔗</span>
+                <span style={styles.metricLabel}>网关拓扑</span>
+              </div>
+              <div style={styles.topology}>
+                <div style={styles.topologyNode}>主网关</div>
+                <div style={styles.topologyArrows}>
+                  {gateways.filter(g => g.status === 'online').map((_, i) => (
+                    <span key={i} style={styles.arrow}>▼</span>
+                  ))}
+                </div>
+                <div style={styles.topologyNodes}>
+                  {gateways.slice(0, 5).map(gw => (
+                    <div key={gw.gatewayId} style={{
+                      ...styles.topologySubNode,
+                      backgroundColor: gw.status === 'online' ? '#10b981' : '#6b7280'
+                    }}>
+                      {gw.gatewayId.split('-').pop()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -328,13 +426,14 @@ function App() {
   )
 }
 
-// 样式（黑色主题）
+// 样式（黑色主题 + 响应式设计 + 交互动画）
 const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: '100vh',
     backgroundColor: '#0f0f0f',
     color: '#e5e5e5',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    overflowX: 'hidden',
   },
   header: {
     display: 'flex',
@@ -378,7 +477,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   stats: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },
@@ -388,6 +487,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '20px',
     textAlign: 'center',
     border: '1px solid #333',
+    transition: 'all 0.3s ease',
+    cursor: 'default',
   },
   statValue: {
     fontSize: '36px',
@@ -399,9 +500,102 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '14px',
     color: '#9ca3af',
   },
+  dashboard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: '12px',
+    padding: '20px',
+    border: '1px solid #333',
+    marginBottom: '24px',
+  },
+  dashboardTitle: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    marginBottom: '16px',
+    color: '#fff',
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '16px',
+  },
+  metricCard: {
+    backgroundColor: '#262626',
+    borderRadius: '8px',
+    padding: '16px',
+    border: '1px solid #404040',
+  },
+  metricHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+  metricIcon: {
+    fontSize: '20px',
+  },
+  metricLabel: {
+    flex: 1,
+    fontSize: '14px',
+    color: '#9ca3af',
+  },
+  metricValue: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  progressBar: {
+    height: '8px',
+    backgroundColor: '#404040',
+    borderRadius: '4px',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: '4px',
+    transition: 'width 0.5s ease',
+  },
+  topology: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px',
+    backgroundColor: '#1a1a1a',
+    borderRadius: '6px',
+  },
+  topologyNode: {
+    backgroundColor: '#10b981',
+    color: '#fff',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+  },
+  topologyArrows: {
+    display: 'flex',
+    gap: '20px',
+    color: '#6b7280',
+    fontSize: '12px',
+  },
+  arrow: {
+    color: '#6b7280',
+  },
+  topologyNodes: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  topologySubNode: {
+    color: '#fff',
+    padding: '6px 12px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+  },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
     gap: '16px',
     marginBottom: '16px',
   },
@@ -410,6 +604,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '12px',
     padding: '20px',
     border: '1px solid #333',
+    transition: 'all 0.3s ease',
   },
   cardTitle: {
     fontSize: '18px',
@@ -484,7 +679,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     cursor: 'pointer',
     marginTop: '8px',
-    transition: 'background-color 0.2s',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
   },
   taskList: {
     display: 'flex',
@@ -539,6 +735,19 @@ const styles: Record<string, React.CSSProperties> = {
   logMessage: {
     color: '#e5e5e5',
   },
+}
+
+// 响应式样式（通过 CSS-in-JS 模拟媒体查询）
+const getResponsiveStyles = (width: number): Record<string, React.CSSProperties> => {
+  if (width < 768) {
+    return {
+      main: { padding: '12px' },
+      stats: { gridTemplateColumns: 'repeat(2, 1fr)' },
+      grid: { gridTemplateColumns: '1fr' },
+      metricsGrid: { gridTemplateColumns: '1fr' },
+    }
+  }
+  return {}
 }
 
 export default App
