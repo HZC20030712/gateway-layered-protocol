@@ -435,6 +435,10 @@ export class Gateway extends EventEmitter {
               this.handleTaskResultAck(message as GatewayTaskResultAckResponse);
               break;
               
+            case 'gateway.heartbeat.ack':
+              // 心跳确认，无需特殊处理
+              break;
+              
             default:
               console.warn(`[AuxGateway] 未知消息类型：${message.type}`);
           }
